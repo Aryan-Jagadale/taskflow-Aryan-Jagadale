@@ -20,16 +20,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const savedToken = localStorage.getItem("taskflow_token");
     const savedUser = localStorage.getItem("taskflow_user");
-    if (savedToken && savedUser) {
-      try {
-        setToken(savedToken);
-        setUser(JSON.parse(savedUser));
-      } catch {
-        localStorage.removeItem("taskflow_token");
-        localStorage.removeItem("taskflow_user");
+    if (savedToken) {
+      setToken(savedToken);
+      if (savedUser) {
+        try {
+          setUser(JSON.parse(savedUser));
+        } catch {
+          // Keep token session if user payload is corrupted; user can be refreshed later.
+          localStorage.removeItem("taskflow_user");
+        }
       }
     }
     setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "taskflow_token") {
+        setToken(event.newValue);
+      }
+      if (event.key === "taskflow_user") {
+        if (!event.newValue) {
+          setUser(null);
+          return;
+        }
+        try {
+          setUser(JSON.parse(event.newValue));
+        } catch {
+          setUser(null);
+        }
+      }
+    };
+
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const login = useCallback((newToken: string, newUser: User) => {

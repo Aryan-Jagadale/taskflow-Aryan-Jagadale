@@ -3,11 +3,40 @@ import { users, passwords, tokens, projects, tasks, generateId } from "./data";
 
 const API = "http://localhost:4000";
 
+function createToken(userId: string) {
+  const payload = btoa(
+    JSON.stringify({
+      sub: userId,
+      exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    })
+  );
+  return `mock.${payload}.sig`;
+}
+
+function getUserIdFromToken(token: string) {
+  if (token.startsWith("tok_")) {
+    const parts = token.split("_");
+    if (parts.length >= 3) return parts[1];
+  }
+  const [prefix, payload] = token.split(".");
+  if (prefix === "mock" && payload) {
+    try {
+      const decoded = JSON.parse(atob(payload)) as { sub?: string; exp?: number };
+      if (!decoded.sub) return null;
+      if (decoded.exp && Date.now() > decoded.exp) return null;
+      return decoded.sub;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 function getAuthUser(request: Request) {
   const auth = request.headers.get("Authorization");
   if (!auth?.startsWith("Bearer ")) return null;
   const token = auth.slice(7);
-  const userId = tokens[token];
+  const userId = tokens[token] ?? getUserIdFromToken(token);
   return users.find((u) => u.id === userId) ?? null;
 }
 
@@ -31,7 +60,7 @@ export const handlers = [
     const user = { id: generateId("u"), name: body.name, email: body.email };
     users.push(user);
     passwords[body.email] = body.password;
-    const token = `tok_${user.id}_${Date.now()}`;
+    const token = createToken(user.id);
     tokens[token] = user.id;
     return HttpResponse.json({ token, user }, { status: 201 });
   }),
@@ -43,7 +72,7 @@ export const handlers = [
     if (!user || passwords[body.email] !== body.password) {
       return HttpResponse.json({ message: "Invalid email or password" }, { status: 401 });
     }
-    const token = `tok_${user.id}_${Date.now()}`;
+    const token = createToken(user.id);
     tokens[token] = user.id;
     return HttpResponse.json({ token, user });
   }),
