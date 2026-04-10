@@ -130,7 +130,17 @@ export function TaskModal({ open, onClose, task, onSave, onDelete, isPending }: 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Due Date</Label>
-              <Input type="date" {...register("dueDate")} />
+              <Input
+                type="date"
+                className="appearance-auto [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-100"
+                onClick={(e) => {
+                  (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
+                }}
+                onFocus={(e) => {
+                  (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
+                }}
+                {...register("dueDate")}
+              />
             </div>
             <div className="space-y-2">
               <Label>Assignee</Label>
