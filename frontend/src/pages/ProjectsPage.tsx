@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProjects, useCreateProject } from "@/hooks/useProjects";
 import { Navbar } from "@/components/Navbar";
@@ -19,12 +19,24 @@ import { Plus, FolderOpen, Calendar } from "lucide-react";
 import { format } from "date-fns";
 
 export default function ProjectsPage() {
-  const { data: projects, isLoading, error } = useProjects();
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const { data, isLoading, error } = useProjects(page, limit);
   const createProject = useCreateProject();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+
+  const projects = data?.items ?? [];
+  const totalPages = data?.pagination.totalPages ?? 1;
+  const total = data?.pagination.total ?? projects.length;
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const handleCreate = () => {
     if (!name.trim()) return;
@@ -95,7 +107,7 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {projects && projects.length === 0 && (
+        {!isLoading && !error && projects.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <FolderOpen className="h-16 w-16 text-muted-foreground/30 mb-4" />
             <h2 className="text-xl font-semibold text-foreground">No projects yet</h2>
@@ -105,26 +117,54 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {projects && projects.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
-              <Card
-                key={project.id}
-                className="cursor-pointer transition-all hover:shadow-md hover:border-primary/30 animate-fade-in"
-                onClick={() => navigate(`/projects/${project.id}`)}
-              >
-                <CardHeader>
-                  <CardTitle className="text-lg">{project.name}</CardTitle>
-                  <CardDescription className="line-clamp-2">{project.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    {format(new Date(project.createdAt), "MMM d, yyyy")}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        {projects.length > 0 && (
+          <div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {projects.map((project) => (
+                <Card
+                  key={project.id}
+                  className="cursor-pointer transition-all hover:shadow-md hover:border-primary/30 animate-fade-in min-h-[150px]"
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                >
+                  <CardHeader>
+                    <CardTitle className="text-lg">{project.name}</CardTitle>
+                    <CardDescription className="line-clamp-2">{project.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Calendar className="h-3 w-3" />
+                      {format(new Date(project.createdAt), "MMM d, yyyy")}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between gap-3 sticky bottom-0 bg-background/80 py-3">
+                <p className="text-sm text-muted-foreground">
+                  Page {page} of {totalPages} • {total} projects
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                    disabled={page <= 1 || isLoading}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                    disabled={page >= totalPages || isLoading}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

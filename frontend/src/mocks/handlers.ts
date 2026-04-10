@@ -53,7 +53,26 @@ export const handlers = [
     await delay(200);
     const auth = requireAuth(request);
     if (auth instanceof Response) return auth;
-    return HttpResponse.json(projects.filter((p) => p.ownerId === auth.id));
+    const url = new URL(request.url);
+    const pageParam = Number(url.searchParams.get("page") ?? 1);
+    const limitParam = Number(url.searchParams.get("limit") ?? 10);
+    const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1;
+    const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.floor(limitParam) : 10;
+    const ownedProjects = projects.filter((p) => p.ownerId === auth.id);
+    const total = ownedProjects.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const start = (page - 1) * limit;
+    const items = ownedProjects.slice(start, start + limit);
+
+    return HttpResponse.json({
+      data: items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    });
   }),
 
   http.post(`${API}/projects`, async ({ request }) => {

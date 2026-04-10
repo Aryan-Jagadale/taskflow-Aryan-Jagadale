@@ -1,12 +1,73 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import { Project } from "@/types";
+import { PaginatedResult, PaginationMeta, Project } from "@/types";
 import { toast } from "sonner";
 
-export function useProjects() {
+type LooseProjectsResponse =
+  | Project[]
+  | {
+      data?: Project[];
+      items?: Project[];
+      projects?: Project[];
+      page?: number;
+      limit?: number;
+      total?: number;
+      totalPages?: number;
+      pagination?: Partial<PaginationMeta>;
+      meta?: Partial<PaginationMeta>;
+    };
+
+function normalizeProjectsResponse(
+  payload: LooseProjectsResponse,
+  fallbackPage: number,
+  fallbackLimit: number
+): PaginatedResult<Project> {
+  if (Array.isArray(payload)) {
+    const total = payload.length;
+    return {
+      items: payload,
+      pagination: {
+        page: fallbackPage,
+        limit: fallbackLimit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / fallbackLimit)),
+      },
+    };
+  }
+
+  const items = payload.data ?? payload.items ?? payload.projects ?? [];
+  const pagination = payload.pagination ?? payload.meta ?? {};
+  const page = payload.page ?? pagination.page ?? fallbackPage;
+  const limit = payload.limit ?? pagination.limit ?? fallbackLimit;
+  const total = payload.total ?? pagination.total ?? items.length;
+  const totalPages =
+    payload.totalPages ??
+    pagination.totalPages ??
+    Math.max(1, Math.ceil(total / Math.max(limit, 1)));
+
+  return {
+    items,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+    },
+  };
+}
+
+export function useProjects(page: number, limit: number) {
   return useQuery({
-    queryKey: ["projects"],
-    queryFn: () => apiFetch<Project[]>("/projects"),
+    queryKey: ["projects", page, limit],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      const response = await apiFetch<LooseProjectsResponse>(`/projects?${params.toString()}`);
+      return normalizeProjectsResponse(response, page, limit);
+    },
+    placeholderData: (previousData) => previousData,
   });
 }
 
