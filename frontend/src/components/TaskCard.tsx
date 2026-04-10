@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types";
 import { Calendar, User } from "lucide-react";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,13 @@ const priorityConfig = {
 interface TaskCardProps {
   task: Task;
   onClick: () => void;
+}
+
+function formatDueDate(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return format(parse(value, "yyyy-MM-dd", new Date()), "MMM d");
+  }
+  return format(new Date(value), "MMM d");
 }
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
@@ -55,7 +62,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         {task.dueDate && (
           <span className="flex items-center gap-1">
             <Calendar className="h-3 w-3" />
-            {format(new Date(task.dueDate), "MMM d")}
+            {formatDueDate(task.dueDate)}
           </span>
         )}
         {task.assignee && (

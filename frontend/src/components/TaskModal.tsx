@@ -36,7 +36,7 @@ import { Trash2 } from "lucide-react";
 const schema = z.object({
   title: z.string().trim().min(1, "Title is required").max(200),
   description: z.string().max(1000).optional(),
-  assignee: z.string().max(100).optional(),
+  assignee: z.string().trim().min(1, "Assignee is required").max(100),
   dueDate: z.string().optional(),
 });
 
@@ -50,8 +50,8 @@ interface TaskModalProps {
     title: string;
     description?: string;
     priority?: TaskPriority;
-    dueDate?: string;
-    assignee?: string;
+    dueDate?: string | null;
+    assignee: string;
     status?: TaskStatus;
   }) => void;
   onDelete?: (id: string) => void;
@@ -73,12 +73,13 @@ export function TaskModal({ open, onClose, task, onSave, onDelete, isPending }: 
   });
 
   const onSubmit = (data: FormData) => {
+    const dueDate = data.dueDate?.trim() || "";
     onSave({
       title: data.title,
       description: data.description,
       priority,
-      dueDate: data.dueDate || undefined,
-      assignee: data.assignee || undefined,
+      dueDate: dueDate ? dueDate : task ? null : undefined,
+      assignee: data.assignee,
       status: task ? status : undefined,
     });
     reset();
@@ -134,6 +135,7 @@ export function TaskModal({ open, onClose, task, onSave, onDelete, isPending }: 
             <div className="space-y-2">
               <Label>Assignee</Label>
               <Input {...register("assignee")} placeholder="Name" />
+              {errors.assignee && <p className="text-sm text-destructive">{errors.assignee.message}</p>}
             </div>
           </div>
           <div className="flex items-center justify-between pt-2">
