@@ -3,10 +3,23 @@ import { apiFetch } from "@/lib/api";
 import { Task, TaskStatus, TaskPriority } from "@/types";
 import { toast } from "sonner";
 
-export function useTasks(projectId: string) {
+interface TaskFilters {
+  status?: TaskStatus;
+}
+
+export function useTasks(projectId: string, filters?: TaskFilters) {
+  const normalizedStatus = filters?.status ?? "all";
+
   return useQuery({
-    queryKey: ["tasks", projectId],
-    queryFn: () => apiFetch<Task[]>(`/projects/${projectId}/tasks`),
+    queryKey: ["tasks", projectId, normalizedStatus],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("projectId", projectId);
+      if (filters?.status) {
+        params.set("status", filters.status);
+      }
+      return apiFetch<Task[]>(`/tasks?${params.toString()}`);
+    },
     enabled: !!projectId,
   });
 }
@@ -52,18 +65,7 @@ export function useUpdateTask(projectId: string) {
         method: "PATCH",
         body: JSON.stringify(data),
       }),
-    onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: ["tasks", projectId] });
-      const prev = qc.getQueryData<Task[]>(["tasks", projectId]);
-      qc.setQueryData<Task[]>(["tasks", projectId], (old) =>
-        old?.map((t) => (t.id === vars.id ? { ...t, ...vars } : t))
-      );
-      return { prev };
-    },
-    onError: (e: Error, _, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["tasks", projectId], ctx.prev);
-      toast.error(e.message);
-    },
+    onError: (e: Error) => toast.error(e.message),
     onSettled: () => qc.invalidateQueries({ queryKey: ["tasks", projectId] }),
   });
 }

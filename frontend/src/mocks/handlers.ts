@@ -131,6 +131,28 @@ export const handlers = [
   }),
 
   // Tasks
+  http.get(`${API}/tasks`, async ({ request }) => {
+    await delay(200);
+    const auth = requireAuth(request);
+    if (auth instanceof Response) return auth;
+
+    const url = new URL(request.url);
+    const projectId = url.searchParams.get("projectId");
+    const status = url.searchParams.get("status");
+
+    let filtered = [...tasks];
+
+    if (projectId) {
+      filtered = filtered.filter((t) => t.projectId === projectId);
+    }
+
+    if (status) {
+      filtered = filtered.filter((t) => t.status === status);
+    }
+
+    return HttpResponse.json(filtered);
+  }),
+
   http.get(`${API}/projects/:id/tasks`, async ({ request, params }) => {
     await delay(200);
     const auth = requireAuth(request);

@@ -19,6 +19,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -45,7 +52,10 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: project, isLoading: projLoading } = useProject(id!);
-  const { data: tasks, isLoading: tasksLoading } = useTasks(id!);
+  const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
+  const { data: tasks, isLoading: tasksLoading } = useTasks(id!, {
+    status: statusFilter === "all" ? undefined : statusFilter,
+  });
   const createTask = useCreateTask(id!);
   const updateTask = useUpdateTask(id!);
   const deleteTask = useDeleteTask(id!);
@@ -169,23 +179,53 @@ export default function ProjectDetailPage() {
             ))}
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCorners}
-            onDragEnd={handleDragEnd}
-            onDragOver={handleDragOver}
-          >
-            <div className="flex gap-4 overflow-x-auto pb-4">
-              {COLUMNS.map((status) => (
-                <KanbanColumn
-                  key={status}
-                  status={status}
-                  tasks={tasksByStatus(status)}
-                  onTaskClick={(task) => setTaskModal({ open: true, task })}
-                />
-              ))}
+          <>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="w-full sm:w-52">
+                <Label>Status</Label>
+                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | TaskStatus)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="todo">To Do</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="done">Done</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setStatusFilter("all");
+                }}
+                disabled={statusFilter === "all"}
+              >
+                Clear filters
+              </Button>
             </div>
-          </DndContext>
+
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragEnd={handleDragEnd}
+              onDragOver={handleDragOver}
+            >
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {COLUMNS.map((status) => (
+                  <KanbanColumn
+                    key={status}
+                    status={status}
+                    tasks={tasksByStatus(status)}
+                    onTaskClick={(task) => setTaskModal({ open: true, task })}
+                  />
+                ))}
+              </div>
+            </DndContext>
+          </>
         )}
 
         {/* Edit project modal */}
