@@ -132,7 +132,6 @@ export const handlers = [
 
   // Tasks
   http.get(`${API}/tasks`, async ({ request }) => {
-    await delay(200);
     const auth = requireAuth(request);
     if (auth instanceof Response) return auth;
 
@@ -189,7 +188,6 @@ export const handlers = [
   }),
 
   http.patch(`${API}/tasks/:id`, async ({ request, params }) => {
-    await delay(200);
     const auth = requireAuth(request);
     if (auth instanceof Response) return auth;
     const task = tasks.find((t) => t.id === params.id);
@@ -207,7 +205,6 @@ export const handlers = [
   }),
 
   http.delete(`${API}/tasks/:id`, async ({ request, params }) => {
-    await delay(200);
     const auth = requireAuth(request);
     if (auth instanceof Response) return auth;
     const idx = tasks.findIndex((t) => t.id === params.id);
